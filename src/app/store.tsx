@@ -49,7 +49,7 @@ import {
   verifyTicketHash,
 } from '../core/security/inputSanitizer';
 
-import { checkOddEvenEligibility, toDateString } from '../core/automation/oddEvenEngine';
+import { checkOddEvenEligibility } from '../core/automation/oddEvenEngine';
 
 // Seed the dispatch counter past the pre-seeded codes
 seedDispatchCounter(10);
@@ -944,7 +944,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             dispatch({ type: 'UPDATE_TANK', tankId: tank.id, patch: { currentLiters: newLiters } });
 
             const fillPct = (newLiters / tank.maxCapacityLiters) * 100;
-            const gajahStation = state.stations.find((s) => s.id === 'spbu-gajah-mada');
             const newMode =
               fillPct <= 10 ? 'EMERGENCY_ONLY' : fillPct <= 30 ? 'THROTTLED' : 'NORMAL';
             dispatch({ type: 'UPDATE_STATION', stationId: 'spbu-gajah-mada', patch: { operationalMode: newMode } });
