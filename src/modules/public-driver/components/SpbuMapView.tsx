@@ -58,8 +58,8 @@ export const SpbuMapView: React.FC<SpbuMapViewProps> = ({
 }) => {
   const { state, getTanksForStation } = useStore();
 
-  // Buleleng Singaraja center coordinate
-  const bulelengCenter: [number, number] = [-8.122, 115.086];
+  // Provinsi Bali center coordinate
+  const baliCenter: [number, number] = [-8.4095, 115.1889];
 
   return (
     <div className="rounded-2xl border border-[#E6E8EC] overflow-hidden bg-white shadow-sm">
@@ -68,10 +68,10 @@ export const SpbuMapView: React.FC<SpbuMapViewProps> = ({
         <div className="flex items-center gap-2">
           <Navigation className="w-4 h-4 text-[#FF5A5F]" />
           <span className="font-bold text-slate-800">
-            Peta Geospasial SPBU Terkoneksi — Kabupaten Buleleng
+            Peta Geospasial SPBU Terkoneksi — Seluruh Provinsi Bali
           </span>
           <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border text-slate-500">
-            Singaraja & Sekitarnya
+            9 Kabupaten / Kota
           </span>
         </div>
 
@@ -97,10 +97,10 @@ export const SpbuMapView: React.FC<SpbuMapViewProps> = ({
       </div>
 
       {/* Leaflet Map Canvas */}
-      <div className="h-[460px] w-full relative z-10">
+      <div className="h-[480px] w-full relative z-10">
         <MapContainer
-          center={bulelengCenter}
-          zoom={13}
+          center={baliCenter}
+          zoom={10}
           scrollWheelZoom={false}
           className="h-full w-full"
         >

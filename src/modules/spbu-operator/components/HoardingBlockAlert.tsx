@@ -104,7 +104,7 @@ export const HoardingBlockAlert: React.FC<HoardingBlockAlertProps> = ({
       <div className="p-3 rounded-xl bg-red-100/70 border border-red-300 text-[11px] text-red-900 flex items-start gap-2.5 mb-4">
         <FileText className="w-4 h-4 text-red-700 flex-shrink-0 mt-0.5" />
         <p className="leading-relaxed">
-          <strong>Regulasi BPH Migas & PRD §3.2:</strong> Pengisian BBM bersubsidi dibatasi maksimal 1 kali dalam 24 jam untuk setiap kendaraan bermotor. Percobaan pengisian ganda ini secara otomatis diblokir dan tercatat dalam <strong>Security Audit Log</strong> SPBU.
+          <strong>Regulasi BPH Migas & Protokol Keamanan Siber:</strong> Pengisian BBM bersubsidi dibatasi maksimal 1 kali dalam 24 jam untuk setiap kendaraan bermotor. Percobaan pengisian ganda ini secara otomatis diblokir dan tercatat dalam <strong>Security Audit Log</strong> SPBU.
         </p>
       </div>
 

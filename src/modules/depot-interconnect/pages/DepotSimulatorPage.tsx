@@ -1,7 +1,7 @@
 // =============================================================================
 // src/modules/depot-interconnect/pages/DepotSimulatorPage.tsx — NusaFuel Grid
-// User C: Depot Pertamina Dispatcher & Judge Evaluation Suite (Final Stage 5)
-// Integrates CrisisSimulatorPanel, WebhookDispatchTable, RestApiPlayground, & SecurityAuditTable
+// User C: Depot Pertamina Dispatcher & Regional Fuel Logistics Orchestration
+// Refactored per design.md with Centered Container max-w-[1240px]
 // =============================================================================
 
 import React from 'react';
@@ -27,21 +27,21 @@ export const DepotSimulatorPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full pb-20 animate-fade-in">
+    <div className="w-full pb-20 animate-fade-in font-sans">
       {/* Header Bar */}
       <section className="bg-[#18152E] text-white py-10 border-b border-slate-800">
-        <div className="max-w-[1360px] mx-auto px-4 sm:px-6">
+        <div className="max-w-[1240px] mx-auto px-6 md:px-10">
           <div className="flex flex-wrap items-center justify-between gap-6">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-xs font-semibold text-[#00A8E8] mb-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-xs font-semibold text-[#00A8E8] mb-3">
                 <Cpu className="w-3.5 h-3.5" />
-                <span>Depot Pertamina Integrated Logistics & Judge Simulator (User C)</span>
+                <span>Orkestrator Logistik Depot Pertamina & API Regional</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-extrabold font-sans tracking-tight">
-                Interkoneksi Depot Logistik & Panel Pengujian Juri
+                Orkestrasi Logistik Depot & Simulasi Ketahanan Pasokan Bali
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Platform pengujian otonom untuk Dewan Juri UINIC 8.0: picu skenario rush hour instan, orkestrasi pengiriman truk tangki berbasis webhook, inspeksi pertukaran payload REST API live, dan verifikasi audit trail kriptografis.
+                Pusat komando logistik BBM Provinsi Bali: pantau pergerakan truk tangki Depot Manggis & Sanggaran, uji simulasi lonjakan beban antrean, inspeksi payload REST API terpadu, dan verifikasi jejak audit keamanan siber.
               </p>
             </div>
 
@@ -68,7 +68,7 @@ export const DepotSimulatorPage: React.FC = () => {
           {/* Quick Jump Anchor Pills */}
           <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-slate-800/80 text-xs">
             <span className="text-slate-400 font-semibold text-[11px] mr-1">
-              Navigasi Cepat Pengujian:
+              Navigasi Cepat Sesi:
             </span>
             <button
               type="button"
@@ -76,7 +76,7 @@ export const DepotSimulatorPage: React.FC = () => {
               className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-[#FF5A5F] text-slate-200 hover:text-white transition-all flex items-center gap-1.5 font-medium active:scale-95 border border-slate-700"
             >
               <Flame className="w-3.5 h-3.5 text-[#FF5A5F]" />
-              <span>Simulasi Krisis 1-Klik</span>
+              <span>Simulasi Respons Krisis</span>
             </button>
             <button
               type="button"
@@ -106,9 +106,9 @@ export const DepotSimulatorPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Main Container */}
-      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 mt-8 space-y-10">
-        {/* Section 1: Crisis Simulator Panel (Coral-Red Highlight Banner per design.md) */}
+      {/* Main Container: max-w-[1240px] mx-auto px-6 md:px-10 py-12 space-y-12 */}
+      <div className="max-w-[1240px] mx-auto px-6 md:px-10 py-12 space-y-12">
+        {/* Section 1: Crisis Simulator Panel */}
         <div id="crisis-simulator-section">
           <CrisisSimulatorPanel />
         </div>

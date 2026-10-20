@@ -134,7 +134,7 @@ export const PlateCheckerCard: React.FC<PlateCheckerCardProps> = ({
             {/* Quick Test Preset Buttons for Evaluators */}
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] text-slate-400 font-semibold mr-1">
-                Preset Juri:
+                Preset Uji Cepat:
               </span>
               {testPresets.map((preset) => (
                 <button
@@ -268,7 +268,7 @@ export const PlateCheckerCard: React.FC<PlateCheckerCardProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-[#FF5A5F]" />
                 Hasil Validasi Real-Time
               </span>
-              <span className="text-[10px] font-mono text-slate-400">PRD §4.1</span>
+              <span className="text-[10px] font-mono text-slate-400">STATUS SISTEM</span>
             </div>
 
             {/* Validation State 1: Invalid Plate */}

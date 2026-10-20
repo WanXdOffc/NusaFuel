@@ -986,7 +986,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }
 
             const log = makeLog('DEPOT_SYSTEM', 'CRISIS_SIMULATED', '54.811.14', 'SURGE_QUEUE', 'WARNING',
-              `[SIMULASI JURI] Lonjakan antrean: Pertalite Gajah Mada dikurangi 1.500L → ${newLiters.toLocaleString('id-ID')}L (${fillPct.toFixed(1)}%). Mode: ${newMode}.`);
+              `[SIMULASI SISTEM] Lonjakan antrean: Pertalite Gajah Mada dikurangi 1.500L → ${newLiters.toLocaleString('id-ID')}L (${fillPct.toFixed(1)}%). Mode: ${newMode}.`);
             dispatch({ type: 'ADD_AUDIT_LOG', log });
           }
           break;
@@ -995,10 +995,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         case 'SIMULATE_HOARDING': {
           // Simulate hoarding attempt by DK 9991 XX at A. Yani
           const fakePlate = 'DK 9991 XX';
-          const targetStation = state.stations.find((s) => s.id === 'spbu-a-yani');
+          const targetStation = state.stations.find((s) => s.id === 'spbu-buleleng-ahmad-yani') ?? state.stations[1];
           const log = makeLog('SECURITY_GUARD', 'HOARDING_BLOCKED', targetStation?.code ?? '54.811.15',
             fakePlate, 'CRITICAL',
-            `🚫 [SIMULASI JURI] Plat ${fakePlate} mencoba isi Pertalite ke-2 di ${targetStation?.name}. ` +
+            `🚫 [BLOKIR KEAMANAN] Plat ${fakePlate} mencoba isi Pertalite ke-2 di ${targetStation?.name}. ` +
               `Riwayat: SPBU Gajah Mada 07:15 WITA. DITOLAK otomatis.`);
           dispatch({ type: 'ADD_AUDIT_LOG', log });
           break;
@@ -1014,7 +1014,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             dispatch({ type: 'UPDATE_STATION', stationId: spbuId, patch: { operationalMode: 'EMERGENCY_ONLY' } });
 
             const log = makeLog('DEPOT_SYSTEM', 'CRISIS_SIMULATED', station?.code ?? '', 'TANK_CRITICAL', 'CRITICAL',
-              `[SIMULASI JURI] Tangki Pertalite ${station?.name} dikuras ke 5% (${criticalLiters}L). Mode: EMERGENCY_ONLY.`);
+              `[SIMULASI DARURAT] Tangki Pertalite ${station?.name} dikuras ke 5% (${criticalLiters}L). Mode: EMERGENCY_ONLY.`);
             dispatch({ type: 'ADD_AUDIT_LOG', log });
           }
           break;
@@ -1055,16 +1055,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             dispatch({ type: 'SET_WEBHOOK_PAYLOAD', payload: buildWebhookPayload(newDispatch) });
 
             const log = makeLog('DEPOT_SYSTEM', 'CRISIS_SIMULATED', station.code, newDispatch.dispatchCode, 'WARNING',
-              `[SIMULASI JURI] Dispatch paksa ${newDispatch.dispatchCode} dibuat untuk ${station.name}. ETA: 20 menit.`);
+              `[DISPATCH MANUAL] Dispatch darurat ${newDispatch.dispatchCode} dibuat untuk ${station.name}. ETA: 20 menit.`);
             dispatch({ type: 'ADD_AUDIT_LOG', log });
           }
           break;
         }
 
         case 'FINISH_UNLOADING_BANYUASRI': {
-          const banyuasri = state.stations.find((s) => s.id === 'spbu-banyuasri');
-          const tank = state.tanks.find((t) => t.spbuId === 'spbu-banyuasri' && t.fuelType === 'Pertalite');
-          if (banyuasri && tank) {
+          const unloadingStation = state.stations.find((s) => s.operationalMode === 'UNLOADING') ?? state.stations[0];
+          const tank = state.tanks.find((t) => t.spbuId === unloadingStation.id && t.fuelType === 'Pertalite');
+          if (unloadingStation && tank) {
             const newLiters = Math.min(tank.maxCapacityLiters, tank.currentLiters + 8000);
             dispatch({
               type: 'UPDATE_TANK',
@@ -1073,17 +1073,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             });
             dispatch({
               type: 'UPDATE_STATION',
-              stationId: 'spbu-banyuasri',
+              stationId: unloadingStation.id,
               patch: { operationalMode: 'NORMAL' },
             });
 
             const log = makeLog(
               'DEPOT_SYSTEM',
-              'CRISIS_SIMULATED',
-              banyuasri.code,
+              'UNLOADING_FINISHED',
+              unloadingStation.code,
               'UNLOADING_FINISHED',
               'INFO',
-              `[SIMULASI JURI] Truk tangki Pertamina selesai bongkar muat di SPBU Banyuasri (+8.000L). Mode operasional: NORMAL, seluruh nozel kembali aktif.`
+              `[LOGISTIK DEPOT] Truk tangki Pertamina selesai bongkar muat di ${unloadingStation.name} (+8.000L). Mode operasional: NORMAL, seluruh nozel kembali aktif.`
             );
             dispatch({ type: 'ADD_AUDIT_LOG', log });
           }
@@ -1098,7 +1098,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             'ALL',
             'INIT_SEED',
             'INFO',
-            `[SIMULASI JURI] Seluruh database relasional (SPBU, Tangki, Tiket, Dispatches) dikembalikan ke kondisi Seed awal.`
+            `[SISTEM INITIALIZE] Seluruh database relasional (SPBU, Tangki, Tiket, Dispatches) disinkronkan ke kondisi Seed regional Bali.`
           );
           dispatch({ type: 'ADD_AUDIT_LOG', log });
           break;
@@ -1125,7 +1125,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       'ALL',
       'SYSTEM',
       'INFO',
-      `[SIMULASI JURI] Tanggal sistem diubah ke ${newIsOdd ? 'GANJIL' : 'GENAP'}. Aturan antrean diperbarui secara instan.`
+      `[SISTEM KALENDER] Paritas tanggal operasional dialihkan ke ${newIsOdd ? 'GANJIL' : 'GENAP'}. Aturan antrean diperbarui secara instan.`
     );
     dispatch({ type: 'ADD_AUDIT_LOG', log });
   }, [state.simulatedDateIsOdd]);

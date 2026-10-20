@@ -144,7 +144,7 @@ export const DoTankerForm: React.FC<DoTankerFormProps> = ({
             onClick={handleFinishUnloadingNow}
             className="py-2 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm"
           >
-            Selesaikan Bongkar Muat Sekarang (Uji Juri)
+            Selesaikan Bongkar Muat (Bypass K3)
           </button>
         </div>
       )}

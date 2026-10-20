@@ -40,6 +40,10 @@ export interface DispatchOrder {
   createdAt: string;
   dispatchedAt?: string;
   deliveredAt?: string;
+  driverName?: string;
+  assignedTankerPlate?: string;
+  routeSegment?: string;
+  updatedAt?: string;
 }
 
 /** Default tanker truck capacity per dispatch order (8,000 L per PRD §3.3). */

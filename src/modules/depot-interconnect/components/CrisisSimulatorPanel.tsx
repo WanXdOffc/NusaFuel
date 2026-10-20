@@ -49,15 +49,15 @@ export const CrisisSimulatorPanel: React.FC = () => {
       <div className="relative z-10 max-w-3xl mb-8">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider text-white mb-3">
           <Sparkles className="w-3.5 h-3.5 text-white" />
-          <span>Panel Simulasi Otonom Khusus Dewan Juri UINIC 8.0</span>
+          <span>Panel Simulasi Ketahanan & Respons Krisis Regional</span>
         </div>
 
         <h2 className="text-2xl sm:text-4xl font-extrabold font-sans tracking-tight text-white leading-tight">
-          Pengujian Respons Krisis & Automasi Otonom (1-Klik)
+          Simulasi Cepat Tanggap Darurat & Otomasi Pasokan (1-Klik)
         </h2>
 
         <p className="text-xs sm:text-sm text-white/90 mt-2 leading-relaxed">
-          Uji seluruh arsitektur sistem (Dynamic Throttling, Auto-Restock Webhook, Anti-Hoarding, & K3 Unloading) secara instan tanpa perlu menunggu tangki BBM habis secara manual di dunia nyata.
+          Simulasikan skenario kedaruratan sistem (Dynamic Throttling, Auto-Restock Webhook, Anti-Hoarding, & K3 Unloading) secara instan untuk memastikan ketahanan pasokan energi di Provinsi Bali.
         </p>
       </div>
 

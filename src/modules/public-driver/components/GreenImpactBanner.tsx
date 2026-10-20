@@ -174,7 +174,7 @@ export const GreenImpactBanner: React.FC = () => {
             <div className="pt-2">
               <div className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-800">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
-                <span>UINIC 8.0 Rubrik Subtema: Lingkungan & AI</span>
+                <span>Standar Keberlanjutan Lingkungan Hidup Bali</span>
               </div>
             </div>
           </div>

@@ -204,10 +204,10 @@ export const CashierQrScanner: React.FC<CashierQrScannerProps> = ({
           </button>
         </div>
 
-        {/* Presets for judges */}
+        {/* Presets for evaluators */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
           <span className="text-[10px] text-slate-400 font-semibold mr-1">
-            Uji Cepat Juri:
+            Preset Uji Cepat:
           </span>
           <button
             type="button"
