@@ -107,7 +107,8 @@ type Action =
   | { type: 'UPDATE_SLOT'; slotId: string; patch: Partial<TimeSlot> }
   | { type: 'ADD_DISPATCH'; dispatch: DispatchOrder }
   | { type: 'UPDATE_DISPATCH'; dispatchId: string; patch: Partial<DispatchOrder> }
-  | { type: 'SET_WEBHOOK_PAYLOAD'; payload: object };
+  | { type: 'SET_WEBHOOK_PAYLOAD'; payload: object }
+  | { type: 'RESET_TO_SEED' };
 
 // ---------------------------------------------------------------------------
 // INITIAL STATE
@@ -216,6 +217,17 @@ function reducer(state: StoreState, action: Action): StoreState {
     case 'SET_WEBHOOK_PAYLOAD':
       return { ...state, lastWebhookPayload: action.payload };
 
+    case 'RESET_TO_SEED':
+      return {
+        ...initialState,
+        stations: JSON.parse(JSON.stringify(BULELENG_SEED.stations)),
+        tanks: JSON.parse(JSON.stringify(BULELENG_SEED.tanks)),
+        slots: JSON.parse(JSON.stringify(BULELENG_SEED.slots)),
+        tickets: JSON.parse(JSON.stringify(BULELENG_SEED.tickets)),
+        dispatches: JSON.parse(JSON.stringify(BULELENG_SEED.dispatches)),
+        auditLogs: JSON.parse(JSON.stringify(BULELENG_SEED.auditLogs)),
+      };
+
     default:
       return state;
   }
@@ -314,10 +326,12 @@ export interface TogglePolicyParams {
 }
 
 export type CrisisEventName =
-  | 'SURGE_QUEUE'        // Reduce 1500L from Gajah Mada Pertalite
-  | 'SIMULATE_HOARDING'  // Try plate DK 9991 XX at a different SPBU
-  | 'TANK_CRITICAL'      // Drain a tank to 5% (emergency only)
-  | 'FORCE_DISPATCH';    // Force-create a new dispatch for any tank
+  | 'SURGE_QUEUE'                 // Rush hour: reduce 900L from Gajah Mada Pertalite (<20% trigger)
+  | 'SIMULATE_HOARDING'           // Attempt hoarding across SPBUs and show block
+  | 'TANK_CRITICAL'               // Drain a tank to 5% (emergency only)
+  | 'FORCE_DISPATCH'              // Force-create a new dispatch for any tank
+  | 'FINISH_UNLOADING_BANYUASRI'  // Mark Banyuasri unloading as complete (+8.000L)
+  | 'RESET_TO_SEED';              // Reset all tables to seed state
 
 // ---------------------------------------------------------------------------
 // HELPER — Create audit log entry
@@ -1044,6 +1058,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               `[SIMULASI JURI] Dispatch paksa ${newDispatch.dispatchCode} dibuat untuk ${station.name}. ETA: 20 menit.`);
             dispatch({ type: 'ADD_AUDIT_LOG', log });
           }
+          break;
+        }
+
+        case 'FINISH_UNLOADING_BANYUASRI': {
+          const banyuasri = state.stations.find((s) => s.id === 'spbu-banyuasri');
+          const tank = state.tanks.find((t) => t.spbuId === 'spbu-banyuasri' && t.fuelType === 'Pertalite');
+          if (banyuasri && tank) {
+            const newLiters = Math.min(tank.maxCapacityLiters, tank.currentLiters + 8000);
+            dispatch({
+              type: 'UPDATE_TANK',
+              tankId: tank.id,
+              patch: { currentLiters: newLiters, unloadingMinutesLeft: 0, lastDoLiters: 8000 },
+            });
+            dispatch({
+              type: 'UPDATE_STATION',
+              stationId: 'spbu-banyuasri',
+              patch: { operationalMode: 'NORMAL' },
+            });
+
+            const log = makeLog(
+              'DEPOT_SYSTEM',
+              'CRISIS_SIMULATED',
+              banyuasri.code,
+              'UNLOADING_FINISHED',
+              'INFO',
+              `[SIMULASI JURI] Truk tangki Pertamina selesai bongkar muat di SPBU Banyuasri (+8.000L). Mode operasional: NORMAL, seluruh nozel kembali aktif.`
+            );
+            dispatch({ type: 'ADD_AUDIT_LOG', log });
+          }
+          break;
+        }
+
+        case 'RESET_TO_SEED': {
+          dispatch({ type: 'RESET_TO_SEED' });
+          const log = makeLog(
+            'DEPOT_SYSTEM',
+            'SYSTEM_RESET',
+            'ALL',
+            'INIT_SEED',
+            'INFO',
+            `[SIMULASI JURI] Seluruh database relasional (SPBU, Tangki, Tiket, Dispatches) dikembalikan ke kondisi Seed awal.`
+          );
+          dispatch({ type: 'ADD_AUDIT_LOG', log });
           break;
         }
       }
