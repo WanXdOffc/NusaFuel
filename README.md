@@ -102,7 +102,7 @@ flowchart TD
 
 Koneksi database PostgreSQL Neon aktif dan terkonfigurasi di file `.env`:
 ```env
-DATABASE_URL=postgresql://neondb_owner:npg_mcu3XGZ4ICES@ep-rough-bonus-az15f3s0-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL=postgresql://neor:npg_mcu3eeS@ep-rough-bonr.c-3.ap-southeast-1.aws.neon.tech/db?sslmode=require&channel_binding=require
 ```
 
 ### Tabel Relasional (DDL lengkap tersedia di `DATABASE_SCHEMA.sql`):
