@@ -27,7 +27,7 @@ export const AppRouter: React.FC = () => {
   }
 
   // Route 3: If not logged in but trying to access specific private route, show login
-  if (!currentUser && (currentPath === '/operator' || currentPath === '/depot')) {
+  if (!currentUser && (currentPath === '/operator' || currentPath === '/depot' || currentPath === '/admin-api')) {
     return <LoginPage />;
   }
 
@@ -40,7 +40,7 @@ export const AppRouter: React.FC = () => {
     return <SpbuDashboardPage />;
   }
 
-  if (currentPath === '/depot' || state.activeRole === 'DEPOT_SIMULATOR') {
+  if (currentPath === '/depot' || currentPath === '/admin-api' || state.activeRole === 'DEPOT_SIMULATOR') {
     return <DepotSimulatorPage />;
   }
 

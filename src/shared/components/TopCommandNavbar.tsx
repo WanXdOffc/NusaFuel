@@ -424,7 +424,7 @@ export const TopCommandNavbar: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSwitchPortal('DEPOT_SIMULATOR', '/depot')}
+                      onClick={() => handleSwitchPortal('DEPOT_SIMULATOR', '/admin-api')}
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between ${
                         state.activeRole === 'DEPOT_SIMULATOR'
                           ? 'bg-indigo-50 text-indigo-700 font-bold'

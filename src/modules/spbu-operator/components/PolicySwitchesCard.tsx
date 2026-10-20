@@ -1,16 +1,17 @@
 // =============================================================================
 // src/modules/spbu-operator/components/PolicySwitchesCard.tsx — NusaFuel Grid
-// Monochrome Charcoal Section with Elevated Vision Card per design.md §2.2 & §6.3
-// Left: Odd-Even Switch | Center: Elevated Dynamic Throttling | Right: 10% Reserve
+// Automated Policy Control Panel for SPBU Operator
+// Controls: Odd-Even Switch, Dynamic Throttling Slider (<30%), 10% Emergency Lock
 // =============================================================================
 
 import React, { useState } from 'react';
 import { useStore } from '../../../app/store';
-import type { SpbuStation } from '../../../core/data/bulelengSpbuSeed';
+import type { SpbuStation } from '../../../core/data/baliSpbuSeed';
 import {
   Calendar,
   Sliders,
   ShieldAlert,
+  Zap,
 } from 'lucide-react';
 
 export interface PolicySwitchesCardProps {
@@ -22,10 +23,11 @@ export const PolicySwitchesCard: React.FC<PolicySwitchesCardProps> = ({
   station,
   operatorId,
 }) => {
-  const { toggleSpbuPolicy } = useStore();
-
-  // Local state for interactive throttling threshold slider simulation
+  const { toggleSpbuPolicy, getEffectiveDate } = useStore();
   const [throttlingThreshold, setThrottlingThreshold] = useState<number>(30);
+
+  const effectiveDate = getEffectiveDate();
+  const isOddDay = effectiveDate.getDate() % 2 !== 0;
 
   const handleToggle = (
     policy: 'oddEvenActive' | 'dynamicThrottlingActive' | 'emergencyReserveActive',
@@ -40,119 +42,107 @@ export const PolicySwitchesCard: React.FC<PolicySwitchesCardProps> = ({
   };
 
   return (
-    <section className="my-10 rounded-2xl bg-[#121316] text-white p-6 sm:p-10 border border-slate-800 shadow-xl relative overflow-hidden">
-      {/* Background architectural pattern */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 pointer-events-none" />
-
-      {/* Section Header */}
-      <div className="relative z-10 max-w-3xl mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-semibold text-[#FF9F1C] mb-3">
-          <Sliders className="w-3.5 h-3.5" />
-          <span>Matriks Kebijakan Distribusi & Automasi SPBU</span>
+    <div className="rounded-2xl bg-white border border-[#E6E8EC] p-6 sm:p-7 shadow-sm space-y-5 flex flex-col justify-between">
+      {/* Panel Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+            <Sliders className="w-4 h-4 text-[#FF5A5F]" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900 leading-tight">
+              Kontrol Kebijakan Otomatis SPBU
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Pengaturan saklar operasional nozel dan kuota SPBU {station.code}
+            </p>
+          </div>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold font-sans tracking-tight text-white leading-snug">
-          Kontrol Kebijakan Operasional SPBU {station.code}
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1 leading-relaxed">
-          Aktifkan regulasi kuota adaptif secara mandiri. Perubahan saklar akan seketika tersinkronisasi ke seluruh antrean warga di Portal Warga.
-        </p>
+
+        <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
+          OTONOMI SPBU
+        </span>
       </div>
 
-      {/* 3-Column Layout: Left Dark | Center Elevated White Card | Right Dark (design.md §2.2) */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-        {/* Kolom 1 (Kiri): Automated Odd-Even Enforcement (Dark surface) */}
-        <div className="flex flex-col justify-between h-full p-6 rounded-xl bg-slate-900/60 border border-slate-800/80">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <span
-                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                  station.oddEvenActive
-                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                }`}
-              >
-                {station.oddEvenActive ? 'ENFORCED' : 'BYPASS'}
+      {/* 3 Policy Blocks in Bento Row 2 */}
+      <div className="space-y-4">
+        {/* Saklar 1: Penegakan Aturan Ganjil-Genap */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-slate-900">
+                1. Penegakan Plat Ganjil-Genap
               </span>
             </div>
 
-            <h3 className="text-base font-bold text-white mb-2 leading-snug">
-              Aturan Ganjil-Genap Otomatis
-            </h3>
-
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Mewajibkan validasi digit terakhir nomor polisi terhadap kalender paritas tanggal. Kendaraan yang tidak sesuai dialihkan otomatis ke jadwal pra-pesan H+1.
-            </p>
-
-            <div className="p-3 rounded-lg bg-black/40 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span>Filter Plat Hari Ini:</span>
-                <span className="font-bold text-white">
-                  {new Date().getDate() % 2 !== 0 ? 'Ganjil (1,3,5,7,9)' : 'Genap (0,2,4,6,8)'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Status Penegakan:</span>
-                <span className={station.oddEvenActive ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
-                  {station.oddEvenActive ? 'Aktif di Pompa' : 'Dibebaskan'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-5 mt-4 border-t border-slate-800/80">
             <button
               type="button"
               onClick={() => handleToggle('oddEvenActive', station.oddEvenActive)}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                station.oddEvenActive
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                station.oddEvenActive ? 'bg-emerald-600' : 'bg-slate-300'
               }`}
             >
-              {station.oddEvenActive ? 'Matikan Penegakan Ganjil-Genap' : 'Aktifkan Penegakan Ganjil-Genap'}
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  station.oddEvenActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
+          </div>
+
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Mewajibkan validasi digit terakhir plat kendaraan terhadap kalender tanggal (Hari ini:{' '}
+            <strong>{isOddDay ? 'Ganjil' : 'Genap'}</strong>).
+          </p>
+
+          <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-slate-200/80">
+            <span className="text-slate-500">Status Nozel:</span>
+            <span
+              className={`font-bold ${
+                station.oddEvenActive ? 'text-emerald-700' : 'text-slate-400'
+              }`}
+            >
+              {station.oddEvenActive ? '● ENFORCED (Aktif)' : '○ BYPASS (Semua Plat)'}
+            </span>
           </div>
         </div>
 
-        {/* Kolom 2 (Tengah): Elevated Solid White Card (Vision style per design.md §5.2) */}
-        <div
-          className="rounded-2xl p-7 bg-white text-slate-900 border border-white shadow-2xl relative transition-all"
-          style={{
-            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.45)',
-            transform: 'translateY(-4px)',
-          }}
-        >
-          {/* Badge Top */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#FF5A5F]/10 flex items-center justify-center text-[#FF5A5F]">
-              <Sliders className="w-5 h-5" />
+        {/* Saklar 2: Dynamic Quota Throttling (<30%) */}
+        <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#FF9F1C]" />
+              <span className="text-xs font-bold text-slate-900">
+                2. Dynamic Quota Throttling
+              </span>
             </div>
-            <span
-              className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                station.dynamicThrottlingActive
-                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                  : 'bg-slate-100 text-slate-600 border border-slate-300'
+
+            <button
+              type="button"
+              onClick={() => handleToggle('dynamicThrottlingActive', station.dynamicThrottlingActive)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                station.dynamicThrottlingActive ? 'bg-[#FF9F1C]' : 'bg-slate-300'
               }`}
             >
-              {station.dynamicThrottlingActive ? 'THROTTLING AKTIF' : 'THROTTLING OFF'}
-            </span>
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  station.dynamicThrottlingActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
 
-          <h3 className="text-lg font-bold text-slate-900 mb-1 leading-snug">
-            Dynamic Quota Throttling
-          </h3>
-          <p className="text-xs text-slate-600 leading-relaxed mb-4">
-            Secara adaptif memangkas kuota pengisian mobil saat stok tangki menipis demi pemerataan bahan bakar warga.
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            Memotong kuota pengisian mobil dari 20L ke 10L saat stok tangki menipis demi
+            pemerataan pasokan.
           </p>
 
-          {/* Interactive Throttling Threshold Slider Preview */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-4 space-y-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-700">Ambang Batas Throttling:</span>
-              <span className="font-mono font-extrabold text-[#FF5A5F] text-sm">
+          {/* Slider Ambang Batas Throttling */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-600 font-semibold">Ambang Batas Throttling:</span>
+              <span className="font-mono font-bold text-[#FF5A5F] bg-white px-2 py-0.5 rounded border border-amber-200">
                 &le; {throttlingThreshold}% Kapasitas
               </span>
             </div>
@@ -163,85 +153,66 @@ export const PolicySwitchesCard: React.FC<PolicySwitchesCardProps> = ({
               step="5"
               value={throttlingThreshold}
               onChange={(e) => setThrottlingThreshold(Number(e.target.value))}
-              className="w-full accent-[#FF5A5F] cursor-pointer"
+              className="w-full accent-[#FF5A5F] cursor-pointer h-1.5 bg-amber-200 rounded-lg"
             />
-
-            {/* Quota Comparison Pills */}
-            <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2 rounded bg-white border border-slate-200 text-center">
-                <span className="text-[10px] text-slate-400 block font-bold">KUOTA NORMAL</span>
-                <span className="font-mono font-bold text-slate-800">Mobil 20 Liter</span>
-              </div>
-              <div className="p-2 rounded bg-amber-50 border border-amber-200 text-center">
-                <span className="text-[10px] text-amber-700 block font-bold">THROTTLED</span>
-                <span className="font-mono font-bold text-amber-900">Mobil 10 Liter</span>
-              </div>
-            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleToggle('dynamicThrottlingActive', station.dynamicThrottlingActive)}
-            className="w-full btn-coral py-3 px-4 text-xs font-bold uppercase tracking-wider shadow-md"
-          >
-            {station.dynamicThrottlingActive ? 'Nonaktifkan Throttling' : 'Aktifkan Dynamic Throttling'}
-          </button>
+          {/* Quota Comparison Preview */}
+          <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
+            <div className="p-1.5 bg-white rounded border border-slate-200 text-center">
+              <span className="text-slate-400 block font-semibold">KUOTA NORMAL</span>
+              <strong className="text-slate-800">Mobil 20 Liter</strong>
+            </div>
+            <div className="p-1.5 bg-amber-100/70 rounded border border-amber-300 text-center">
+              <span className="text-amber-800 block font-bold">THROTTLED</span>
+              <strong className="text-amber-950 font-mono">Mobil 10 Liter</strong>
+            </div>
+          </div>
         </div>
 
-        {/* Kolom 3 (Kanan): 10% Emergency Reserve Lock (Dark surface) */}
-        <div className="flex flex-col justify-between h-full p-6 rounded-xl bg-slate-900/60 border border-slate-800/80">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <span
-                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                  station.emergencyReserveActive
-                    ? 'bg-red-950 text-red-400 border border-red-800'
-                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                }`}
-              >
-                {station.emergencyReserveActive ? 'RESERVE LOCKED' : 'UNLOCKED'}
+        {/* Saklar 3: Kunci Cadangan Darurat 10% */}
+        <div className="p-4 rounded-xl bg-red-50/60 border border-red-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-red-600" />
+              <span className="text-xs font-bold text-slate-900">
+                3. Kunci Cadangan Darurat 10%
               </span>
             </div>
 
-            <h3 className="text-base font-bold text-white mb-2 leading-snug">
-              Cadangan Darurat 10% (Safety Reserve)
-            </h3>
-
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Mengunci 10% sisa volume tangki BBM subsidi secara otomatis. Stok ini dilarang disalurkan ke masyarakat umum dan khusus melayani ambulans, damkar, dan logistik bencana BPBD.
-            </p>
-
-            <div className="p-3 rounded-lg bg-black/40 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span>Volume Terkunci:</span>
-                <span className="font-mono font-bold text-red-400">1.000 - 1.600 Liter</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Peruntukan Khusus:</span>
-                <span className="font-semibold text-slate-200">Ambulans / Damkar</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-5 mt-4 border-t border-slate-800/80">
             <button
               type="button"
               onClick={() => handleToggle('emergencyReserveActive', station.emergencyReserveActive)}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                station.emergencyReserveActive
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                station.emergencyReserveActive ? 'bg-red-600' : 'bg-slate-300'
               }`}
             >
-              {station.emergencyReserveActive ? 'Buka Kunci Cadangan Darurat' : 'Kunci Cadangan Darurat 10%'}
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  station.emergencyReserveActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
+          </div>
+
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            Mengunci sisa 10% dasar tangki BBM untuk layanan prioritas ambulans, damkar, dan BPBD
+            bencana.
+          </p>
+
+          <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-red-200/80">
+            <span className="text-slate-500">Volume Terkunci:</span>
+            <span
+              className={`font-mono font-bold ${
+                station.emergencyReserveActive ? 'text-red-600' : 'text-slate-400'
+              }`}
+            >
+              {station.emergencyReserveActive ? '~1.000 L Terkunci' : 'Tidak Terkunci'}
+            </span>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 export default PolicySwitchesCard;

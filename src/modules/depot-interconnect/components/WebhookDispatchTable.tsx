@@ -1,7 +1,8 @@
 // =============================================================================
 // src/modules/depot-interconnect/components/WebhookDispatchTable.tsx — NusaFuel Grid
-// Cross-Station B2B Webhook Dispatch Orchestration Table
-// Depot Dispatcher controls: IN_TRANSIT and DELIVERED status advancements
+// Panel Orkestrasi Truk Tangki Depot Manggis & Sanggaran
+// Cross-Station B2B Webhook Dispatch Orchestration across Bali Island
+// Features: Depot Hub Selector, Manual Dispatch, Rush Hour Simulator, and Status Advancement
 // =============================================================================
 
 import React, { useState } from 'react';
@@ -12,11 +13,18 @@ import {
   Clock,
   Zap,
   Play,
+  Building2,
+  TrendingDown,
 } from 'lucide-react';
 
 export const WebhookDispatchTable: React.FC = () => {
   const { state, triggerDepotDispatch, simulateCrisisEvent } = useStore();
-  const [selectedStationId, setSelectedStationId] = useState<string>('spbu-gajah-mada');
+  const [selectedStationId, setSelectedStationId] = useState<string>(
+    state.stations[0]?.id ?? 'spbu-gajah-mada'
+  );
+  const [selectedDepot, setSelectedDepot] = useState<'MANGGIS' | 'SANGGARAN'>('MANGGIS');
+  const [tankerVolume, setTankerVolume] = useState<number>(8000);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const handleAdvanceStatus = (dispatchId: string) => {
     triggerDepotDispatch(dispatchId);
@@ -24,49 +32,143 @@ export const WebhookDispatchTable: React.FC = () => {
 
   const handleForceManualDispatch = () => {
     simulateCrisisEvent('FORCE_DISPATCH', selectedStationId);
+    const targetSpbu = state.stations.find((s) => s.id === selectedStationId);
+    setActionNotice(
+      `Truk tangki ${tankerVolume.toLocaleString('id-ID')}L dari Depot ${
+        selectedDepot === 'MANGGIS' ? 'Manggis (Karangasem)' : 'Sanggaran (Denpasar)'
+      } berhasil diterbitkan menuju ${targetSpbu?.name ?? 'SPBU Tujuan'}.`
+    );
+    setTimeout(() => setActionNotice(null), 4000);
+  };
+
+  const handleSimulateRushHour = () => {
+    simulateCrisisEvent('SURGE_QUEUE');
+    setActionNotice(
+      'Simulasi Rush Hour berhasil: Stok Pertalite turun -1.500L (&le;20%) dan memicu event Autonomous Webhook Dispatch!'
+    );
+    setTimeout(() => setActionNotice(null), 5000);
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E6E8EC] p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="rounded-2xl bg-white border border-[#E6E8EC] p-6 sm:p-8 shadow-sm space-y-6 font-sans">
       {/* Table Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Truck className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 leading-snug">
-              Antrean Dispatch Truk Tangki — Depot Pertamina Manggis
+              Panel Orkestrasi Truk Tangki Depot Manggis & Sanggaran
             </h3>
             <p className="text-xs text-slate-500">
-              Orkestrasi logistik BBM otonom berbasis webhook restock (&le;20% tangki)
+              Orkestrasi logistik BBM regional berbasis webhook restock otomatis (&le;20% tangki)
             </p>
           </div>
         </div>
 
-        {/* Manual dispatch trigger */}
+        {/* 2 Regional Supply Hubs Indicator */}
         <div className="flex items-center gap-2">
-          <select
-            value={selectedStationId}
-            onChange={(e) => setSelectedStationId(e.target.value)}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
-          >
-            {state.stations.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={handleForceManualDispatch}
-            className="btn-coral py-2 px-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-          >
-            <Zap className="w-3.5 h-3.5 fill-white" />
-            <span>Picu Dispatch Baru</span>
-          </button>
+          <div className="p-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">HUB UTARA/TIMUR</span>
+            <strong className="text-slate-800">IT Manggis</strong>
+          </div>
+          <div className="p-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">HUB SELATAN/BARAT</span>
+            <strong className="text-slate-800">FT Sanggaran</strong>
+          </div>
         </div>
       </div>
+
+      {/* Control Bar: Depot Origin, Destination SPBU, Volume, Action Buttons */}
+      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-blue-600" />
+            <span>Kontrol Penerbitan Armada Truk Tangki</span>
+          </span>
+          <span className="text-[10px] font-mono text-slate-500">Regional Jatimbalinus</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Depot Origin */}
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+              Depot Asal:
+            </label>
+            <select
+              value={selectedDepot}
+              onChange={(e) => setSelectedDepot(e.target.value as 'MANGGIS' | 'SANGGARAN')}
+              className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+            >
+              <option value="MANGGIS">IT Manggis (Karangasem)</option>
+              <option value="SANGGARAN">FT Sanggaran (Denpasar/Benoa)</option>
+            </select>
+          </div>
+
+          {/* Destination SPBU */}
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+              SPBU Tujuan:
+            </label>
+            <select
+              value={selectedStationId}
+              onChange={(e) => setSelectedStationId(e.target.value)}
+              className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+            >
+              {state.stations.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} — {s.name} ({s.regency})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Volume */}
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+              Kapasitas Truk Tangki:
+            </label>
+            <select
+              value={tankerVolume}
+              onChange={(e) => setTankerVolume(Number(e.target.value))}
+              className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
+            >
+              <option value={8000}>8.000 Liter (1 Kompartemen)</option>
+              <option value={16000}>16.000 Liter (2 Kompartemen)</option>
+            </select>
+          </div>
+
+          {/* Dispatch Action Buttons */}
+          <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={handleForceManualDispatch}
+              className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap"
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>Kirim Truk</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSimulateRushHour}
+              className="py-2 px-3 rounded-lg bg-[#FF5A5F] hover:bg-[#e0484d] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
+              title="Simulasikan lonjakan antrean yang memicu level tangki <=20% dan mengirim auto-webhook"
+            >
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>Simulasi Rush Hour</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {actionNotice && (
+        <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2 animate-slide-in-up">
+          <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+          <span>{actionNotice}</span>
+        </div>
+      )}
 
       {/* Dispatches Table */}
       <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -133,10 +235,10 @@ export const WebhookDispatchTable: React.FC = () => {
                         {order.triggerSource === 'AUTO_WEBHOOK_LOW_TANK' ? (
                           <>
                             <Zap className="w-3 h-3 text-amber-600 fill-amber-600" />
-                            <span>WEBHOOK (&le;20%)</span>
+                            <span>AUTO WEBHOOK (&le;20%)</span>
                           </>
                         ) : (
-                          <span>OPERATOR MANUAL</span>
+                          <span>DISPATCH MANUAL</span>
                         )}
                       </span>
                     </td>

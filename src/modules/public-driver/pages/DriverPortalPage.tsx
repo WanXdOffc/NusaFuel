@@ -1,86 +1,116 @@
 // =============================================================================
 // src/modules/public-driver/pages/DriverPortalPage.tsx — NusaFuel Grid
-// User A: Citizen Driver Portal (Refactored per design.md with Centered Container)
+// User A: Citizen Driver Portal (Provinsi Bali — 9 Regencies)
+// Features: Vehicle Profile & Parity Chip, Live BaliInteractiveMap,
+// Smart Alternative SPBU Recommendation for Throttled/Unloading Stations,
+// 30-Minute Batching TimeSlotModal, and Verifiable Digital QR Ticket.
 // =============================================================================
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../../../app/store';
-import { PlateCheckerCard } from '../components/PlateCheckerCard';
-import { GreenImpactBanner } from '../components/GreenImpactBanner';
-import { SpbuTankCard } from '../components/SpbuTankCard';
-import { SpbuMapView } from '../components/SpbuMapView';
+import { useAuth } from '../../../core/auth/authContext';
+import { BaliInteractiveMap } from '../../../shared/components/BaliInteractiveMap';
 import { TimeSlotModal } from '../components/TimeSlotModal';
 import { DigitalTicketQR } from '../components/DigitalTicketQR';
-import type { SpbuStation, FuelTank, FuelType, VehicleType, QueueTicket } from '../../../core/data/baliSpbuSeed';
+import type { SpbuStation, FuelTank, FuelType, QueueTicket } from '../../../core/data/baliSpbuSeed';
+import type { VehicleType } from '../../../core/automation/oddEvenEngine';
+import { checkOddEvenEligibility } from '../../../core/automation/oddEvenEngine';
 import {
   Calendar,
   Sparkles,
   RefreshCw,
-  Search,
-  LayoutGrid,
-  Map as MapIcon,
   Ticket,
   QrCode,
-  Filter,
+  ShieldCheck,
+  AlertTriangle,
+  Car,
+  Bike,
+  CheckCircle2,
+  MapPin,
+  Clock,
+  Fuel,
 } from 'lucide-react';
 
 export const DriverPortalPage: React.FC = () => {
-  const { state, toggleSimulatedDateParity, getEffectiveDate } = useStore();
+  const { state, toggleSimulatedDateParity, getEffectiveDate, getTanksForStation } = useStore();
+  const { currentUser } = useAuth();
 
-  // Local state for the plate checker interaction
-  const [plateNumber, setPlateNumber] = useState('DK 4821 FB');
-  const [vehicleType, setVehicleType] = useState<VehicleType>('MOBIL');
+  // Driver vehicle & plate state
+  const [plateNumber, setPlateNumber] = useState(currentUser?.plateNumber ?? 'DK 4821 FB');
+  const [vehicleType, setVehicleType] = useState<VehicleType>(currentUser?.vehicleType ?? 'MOBIL');
   const [fuelType, setFuelType] = useState<FuelType>('Pertalite');
-  const [targetBookingDate, setTargetBookingDate] = useState<Date>(getEffectiveDate());
 
-  // SPBU listing & view states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRegency, setSelectedRegency] = useState<string>('ALL');
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-
-  // Modal states
+  // Interactive booking & modal states
   const [bookingStation, setBookingStation] = useState<SpbuStation | null>(null);
   const [bookingTank, setBookingTank] = useState<FuelTank | null>(null);
   const [activeTicket, setActiveTicket] = useState<QueueTicket | null>(null);
 
-  const spbuDirectoryRef = useRef<HTMLDivElement>(null);
+  // Smart Alternative Recommendation state
+  const [recommendedStation, setRecommendedStation] = useState<SpbuStation | null>(null);
+  const [throttledStationNotice, setThrottledStationNotice] = useState<{
+    station: SpbuStation;
+    tank: FuelTank;
+  } | null>(null);
 
   const effectiveDate = getEffectiveDate();
-  const isOddDay = effectiveDate.getDate() % 2 !== 0;
+  const dayNumber = effectiveDate.getDate();
+  const isOddDay = dayNumber % 2 !== 0;
 
-  // Filter stations by search query & regency
-  const regencyList = Array.from(new Set(state.stations.map((s) => s.regency).filter(Boolean)));
+  // Run Odd-Even parity engine on driver's plate
+  const parityAccess = useMemo(() => {
+    return checkOddEvenEligibility(plateNumber, effectiveDate, vehicleType);
+  }, [plateNumber, effectiveDate, vehicleType]);
 
-  const filteredStations = state.stations.filter((station) => {
-    const matchesRegency = selectedRegency === 'ALL' || station.regency === selectedRegency;
-    const matchesQuery =
-      station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      station.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      station.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (station.regency && station.regency.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesRegency && matchesQuery;
-  });
+  // Find latest active booked ticket for this driver
+  const driverActiveTicket = state.tickets.find(
+    (t) => t.plateNumber.toUpperCase() === plateNumber.toUpperCase() && t.status === 'BOOKED'
+  );
 
-  const getTanksForStation = (stationId: string): FuelTank[] => {
-    return state.tanks.filter((t) => t.spbuId === stationId);
-  };
+  // Handler when a station is clicked in BaliInteractiveMap
+  const handleStationMapSelection = (st: SpbuStation, tank: FuelTank) => {
+    // If the station is THROTTLED, UNLOADING, or EMERGENCY_ONLY, trigger Smart Alternative Recommendation
+    if (st.operationalMode === 'THROTTLED' || st.operationalMode === 'UNLOADING' || st.operationalMode === 'EMERGENCY_ONLY') {
+      // Find an alternative SPBU in the same regency with NORMAL status
+      const sameRegencyNormal = state.stations.find(
+        (other) =>
+          other.id !== st.id &&
+          other.regency === st.regency &&
+          other.operationalMode === 'NORMAL'
+      );
 
-  const handleProceedToBooking = (date: Date) => {
-    setTargetBookingDate(date);
-    if (spbuDirectoryRef.current) {
-      spbuDirectoryRef.current.scrollIntoView({ behavior: 'smooth' });
+      // Fallback: any other NORMAL station in Bali
+      const anyNormal = sameRegencyNormal || state.stations.find(
+        (other) => other.id !== st.id && other.operationalMode === 'NORMAL'
+      );
+
+      setThrottledStationNotice({ station: st, tank });
+      setRecommendedStation(anyNormal ?? null);
+    } else {
+      // Station is NORMAL, proceed to booking modal directly
+      setThrottledStationNotice(null);
+      setRecommendedStation(null);
+      setBookingStation(st);
+      setBookingTank(tank);
     }
   };
 
-  const handleOpenSlotModal = (station: SpbuStation, tank: FuelTank) => {
-    setBookingStation(station);
-    setBookingTank(tank);
+  const handleAcceptAlternative = () => {
+    if (!recommendedStation) return;
+    const tanks = getTanksForStation(recommendedStation.id);
+    const targetTank = tanks.find((t) => t.fuelType === fuelType) ?? tanks[0];
+    setThrottledStationNotice(null);
+    setRecommendedStation(null);
+    setBookingStation(recommendedStation);
+    setBookingTank(targetTank);
   };
 
-  // Find latest active ticket for user plate if exists
-  const driverActiveTicket = state.tickets.find(
-    (t) => t.plateNumber === plateNumber && t.status === 'BOOKED'
-  );
+  const handleProceedWithThrottled = () => {
+    if (!throttledStationNotice) return;
+    setBookingStation(throttledStationNotice.station);
+    setBookingTank(throttledStationNotice.tank);
+    setThrottledStationNotice(null);
+    setRecommendedStation(null);
+  };
 
   return (
     <div className="w-full pb-20 animate-fade-in font-sans">
@@ -99,51 +129,140 @@ export const DriverPortalPage: React.FC = () => {
 
         <div className="relative z-20 max-w-[1240px] mx-auto px-6 md:px-10">
           <div className="max-w-3xl mb-8">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-slate-200 mb-4 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-[#00A8E8] mb-4 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-[#FF5A5F] animate-pulse" />
-              <span>Portal Layanan Warga Terpadu — Provinsi Bali</span>
+              <span>Portal Layanan Warga Terpadu — Provinsi Bali (9 Kab/Kota)</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold font-sans tracking-tight text-white leading-tight mb-4 drop-shadow-md">
               Antrean Digital BBM Cerdas & Transparansi Kuota SPBU
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl">
-              Hindari antrean panjang mengular di SPBU. Periksa hak akses plat ganjil-genap Anda secara instan dan amankan slot waktu 30-menit dengan proteksi kuota kriptografis.
+            <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed max-w-2xl">
+              Pilih SPBU mana pun di seluruh pulau Bali langsung dari peta interaktif. Dapatkan
+              kuota 30 menit terjamin dan hindari pemborosan waktu dalam antrean.
             </p>
-
-            {/* Parity Status Callout */}
-            <div className="mt-5 inline-flex flex-wrap items-center gap-3 bg-white/10 backdrop-blur-md p-2.5 px-4 rounded-xl border border-white/20 text-xs">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#FF9F1C]" />
-                <span className="text-slate-300">Status Paritas:</span>
-                <span className="font-bold text-white">
-                  {isOddDay ? 'HARI GANJIL (Plat 1, 3, 5, 7, 9)' : 'HARI GENAP (Plat 0, 2, 4, 6, 8)'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={toggleSimulatedDateParity}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FF5A5F] hover:bg-[#E0484D] text-white font-bold transition-all shadow-xs"
-                title="Beralih tanggal sistem untuk menguji validasi ganjil/genap"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Ubah Paritas</span>
-              </button>
-            </div>
           </div>
 
-          {/* Interactive PlateCheckerCard Component */}
-          <div className="mt-6">
-            <PlateCheckerCard
-              plateNumber={plateNumber}
-              setPlateNumber={setPlateNumber}
-              vehicleType={vehicleType}
-              setVehicleType={setVehicleType}
-              fuelType={fuelType}
-              setFuelType={setFuelType}
-              onProceedToBooking={handleProceedToBooking}
-            />
+          {/* Vehicle Profile & Parity Access Status Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 sm:p-7 border border-white/20 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              {/* Left: Driver Vehicle Config */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <ShieldCheck className="w-4 h-4 text-[#00A8E8]" />
+                  <span>Profil Kendaraan & Hak Akses Hari Ini</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Plate Input */}
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-300 block mb-1">
+                      Nomor Polisi (Plat):
+                    </label>
+                    <input
+                      type="text"
+                      value={plateNumber}
+                      onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
+                      className="px-3.5 py-2 rounded-xl bg-slate-900/90 text-white font-mono font-bold text-sm tracking-wider border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F] w-40"
+                    />
+                  </div>
+
+                  {/* Vehicle Type Switcher */}
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-300 block mb-1">
+                      Jenis Kendaraan:
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setVehicleType('MOBIL')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                          vehicleType === 'MOBIL'
+                            ? 'bg-[#FF5A5F] text-white shadow-xs'
+                            : 'text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        <Car className="w-3.5 h-3.5" />
+                        <span>Mobil (20L)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setVehicleType('MOTOR')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                          vehicleType === 'MOTOR'
+                            ? 'bg-[#FF5A5F] text-white shadow-xs'
+                            : 'text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        <Bike className="w-3.5 h-3.5" />
+                        <span>Motor (4L)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fuel Choice */}
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-300 block mb-1">
+                      Pilihan BBM:
+                    </label>
+                    <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/10">
+                      {(['Pertalite', 'Pertamax', 'Solar'] as FuelType[]).map((fuel) => (
+                        <button
+                          key={fuel}
+                          type="button"
+                          onClick={() => setFuelType(fuel)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            fuelType === fuel
+                              ? 'bg-white text-slate-900 shadow-xs'
+                              : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          {fuel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Parity Status Callout */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-900/90 p-4 rounded-xl border border-white/10">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#FF9F1C]" />
+                    <span className="text-xs font-semibold text-slate-300">
+                      Kalender: {isOddDay ? 'HARI GANJIL' : 'HARI GENAP'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {parityAccess.allowedToday ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Hak Akses Terbuka Hari Ini</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Jadwal Anda: Besok (H+1)</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleSimulatedDateParity}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-[#FF5A5F] text-white text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 border border-white/20 whitespace-nowrap"
+                  title="Ganti paritas tanggal untuk pengujian"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Ubah Tanggal</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -151,7 +270,7 @@ export const DriverPortalPage: React.FC = () => {
       {/* 2. Active Ticket Notification Banner (if user already booked) */}
       {driverActiveTicket && (
         <div className="max-w-[1240px] mx-auto px-6 md:px-10 mt-8">
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-2 border-emerald-300 shadow-md flex flex-wrap items-center justify-between gap-4 animate-slide-in-up">
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-2 border-emerald-300 shadow-md flex flex-wrap items-center justify-between gap-4 animate-slide-in-up">
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Ticket className="w-6 h-6" />
@@ -159,13 +278,13 @@ export const DriverPortalPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
-                    Tiket Antrean Aktif Anda:
+                    Tiket Antrean Terkonfirmasi:
                   </span>
-                  <span className="font-mono text-sm font-extrabold text-slate-900">
+                  <span className="font-mono text-sm font-extrabold text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-200">
                     {driverActiveTicket.ticketCode}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5">
+                <p className="text-xs text-slate-600 mt-1">
                   {driverActiveTicket.spbuName} • {driverActiveTicket.fuelType} (Maks {driverActiveTicket.quotaLiters}L) • Gelombang {driverActiveTicket.slotWindowLabel}
                 </p>
               </div>
@@ -177,121 +296,113 @@ export const DriverPortalPage: React.FC = () => {
               className="btn-coral py-2.5 px-5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm"
             >
               <QrCode className="w-4 h-4" />
-              <span>Buka Kode QR Tiket</span>
+              <span>Buka QR Pass Tiket</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* 3. Main Centered Body Container: max-w-[1240px] mx-auto px-6 md:px-10 py-12 space-y-12 */}
-      <div className="max-w-[1240px] mx-auto px-6 md:px-10 py-12 space-y-12">
-        {/* Green Impact Banner & 2x2 KPI Metrics */}
-        <GreenImpactBanner />
-
-        {/* 4. SPBU Directory Section with Grid / Map Toggle & Regency Filter */}
-        <div ref={spbuDirectoryRef} className="pt-4 scroll-mt-24 space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF5A5F] mb-1">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Pilih SPBU Tujuan</span>
+      {/* 3. Main Centered Body: Bali Interactive Map & Smart Recommendations */}
+      <div className="max-w-[1240px] mx-auto px-6 md:px-10 py-10 space-y-8">
+        {/* Smart Alternative Recommendation Modal/Alert Card (If Throttled/Unloading clicked) */}
+        {throttledStationNotice && recommendedStation && (
+          <div className="p-6 rounded-2xl bg-amber-50 border-2 border-amber-300 shadow-lg text-slate-900 animate-slide-in-up space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                      Rekomendasi Cerdas Sistem
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      Pemerataan Beban SPBU
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mt-1">
+                    {throttledStationNotice.station.name} Sedang Menerapkan Pembatasan (
+                    {throttledStationNotice.station.operationalMode})
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Stok tangki di stasiun ini tersisa &lt;30% sehingga kuota mobil dipotong menjadi 10L
+                    atau sedang dalam proses bongkar tangki. Untuk pengisian optimal kuota penuh (20L),
+                    kami merekomendasikan SPBU alternatif di bawah ini:
+                  </p>
+                </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold font-sans text-slate-900 tracking-tight">
-                Ketersediaan Kuota SPBU di Seluruh Bali
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Jadwal antrean untuk: <strong className="text-slate-800">{targetBookingDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> • Bahan bakar: <strong className="text-[#FF5A5F]">{fuelType}</strong>
-              </p>
             </div>
 
-            {/* Filter & View Switcher Controls */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Regency Filter */}
-              <div className="flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <select
-                  value={selectedRegency}
-                  onChange={(e) => setSelectedRegency(e.target.value)}
-                  className="py-1.5 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
-                >
-                  <option value="ALL">Semua Kabupaten/Kota</option>
-                  {regencyList.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+            {/* Recommended Station Card */}
+            <div className="p-4 rounded-xl bg-white border border-emerald-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="badge badge-normal text-[9px] py-0.5 px-2 font-bold">
+                    STOK NORMAL & PENUH
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-400">
+                    {recommendedStation.code}
+                  </span>
+                </div>
+                <h4 className="font-bold text-sm text-slate-900">
+                  {recommendedStation.name}
+                </h4>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{recommendedStation.address}, {recommendedStation.regency}</span>
+                </p>
               </div>
 
-              {/* Search bar */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari SPBU / Jalan..."
-                  className="pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A5F] text-slate-800 placeholder:text-slate-400 w-40 sm:w-48"
-                />
-              </div>
-
-              {/* Grid / Map View Switcher */}
-              <div className="bg-slate-100 p-1 rounded-lg border border-slate-200 flex items-center shadow-inner">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setViewMode('grid')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  onClick={handleAcceptAlternative}
+                  className="btn-coral py-2.5 px-4 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs whitespace-nowrap"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>Grid</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Pilih SPBU Rekomendasi Ini</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setViewMode('map')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-                    viewMode === 'map'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  onClick={handleProceedWithThrottled}
+                  className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors whitespace-nowrap"
                 >
-                  <MapIcon className="w-3.5 h-3.5 text-[#FF5A5F]" />
-                  <span>Peta</span>
+                  Tetap Lanjut di SPBU Pilihan
                 </button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Conditional View Rendering: Grid vs Leaflet Map */}
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredStations.map((station) => {
-                const tanks = getTanksForStation(station.id);
-                return (
-                  <SpbuTankCard
-                    key={station.id}
-                    station={station}
-                    tanks={tanks}
-                    selectedFuelType={fuelType}
-                    onSelectBooking={handleOpenSlotModal}
-                  />
-                );
-              })}
+        {/* Section Title */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF5A5F] mb-1">
+              <Sparkles className="w-4 h-4" />
+              <span>Peta Interaktif Kuota SPBU se-Bali (9 Kabupaten / Kota)</span>
             </div>
-          ) : (
-            <SpbuMapView
-              selectedFuelType={fuelType}
-              onSelectBooking={handleOpenSlotModal}
-            />
-          )}
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-sans text-slate-900 tracking-tight">
+              Pilih SPBU Tujuan & Ambil Slot Waktu
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
+              Klik stasiun mana pun di peta atau di daftar sebelah kiri. Sistem akan mengarahkan
+              Anda ke jadwal kedatangan 30 menit dengan alokasi liter yang terjamin.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono font-bold bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 shadow-2xs">
+            <Fuel className="w-4 h-4 text-[#FF5A5F]" />
+            <span>Target BBM: {fuelType}</span>
+          </div>
         </div>
+
+        {/* Live BaliInteractiveMap Component with Booking Callback */}
+        <BaliInteractiveMap onSelectBooking={handleStationMapSelection} />
       </div>
 
-      {/* 5. TimeSlotModal (30-Minute Booking Batching) */}
+      {/* 4. TimeSlotModal (30-Minute Booking Batching) */}
       {bookingStation && bookingTank && (
         <TimeSlotModal
           isOpen={true}
@@ -304,7 +415,7 @@ export const DriverPortalPage: React.FC = () => {
           plateNumber={plateNumber}
           vehicleType={vehicleType}
           fuelType={fuelType}
-          targetDate={targetBookingDate}
+          targetDate={effectiveDate}
           onBookingSuccess={(ticket) => {
             setActiveTicket(ticket);
             setBookingStation(null);
@@ -313,7 +424,7 @@ export const DriverPortalPage: React.FC = () => {
         />
       )}
 
-      {/* 6. DigitalTicketQR (Verifiable QR Receipt Modal) */}
+      {/* 5. DigitalTicketQR (Verifiable QR Receipt Modal) */}
       {activeTicket && (
         <DigitalTicketQR
           ticket={activeTicket}

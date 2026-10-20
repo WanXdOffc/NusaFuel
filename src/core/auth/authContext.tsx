@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (userToLogin.role === 'OPERATOR') {
       navigate('/operator');
     } else {
-      navigate('/depot');
+      navigate('/admin-api');
     }
     return true;
   };
@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (role === 'OPERATOR') {
       navigate('/operator');
     } else {
-      navigate('/depot');
+      navigate('/admin-api');
     }
   };
 
