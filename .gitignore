@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+PRD.md
+DESIGN.md
+AGENT.md
