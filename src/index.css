@@ -5,6 +5,7 @@
    ============================================================================= */
 
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* ---------------------------------------------------------------------------
    THEME LAYER — Extend Tailwind with NusaFuel Grid design tokens
